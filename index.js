@@ -3,7 +3,11 @@ require("dotenv").config();
 const cron = require("node-cron");
 
 const client = new Client({
-  intents: [GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+  intents: [
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+  ],
   partials: [Partials.Message, Partials.Channel],
 });
 
@@ -29,6 +33,28 @@ client.once(Events.ClientReady, () => {
     },
     { timezone: "America/Bogota" },
   );
+});
+
+client.on(Events.MessageCreate, (message) => {
+  if (message.author.bot) return;
+
+  console.log("asdasd");
+
+  const author = message.author.id;
+  const content = message.content;
+
+  const regexUrl = /\bhttps?:\/\/\S+/gi;
+
+  const enlacesEncontrados = message.content.match(regexUrl);
+
+  if (enlacesEncontrados) {
+    enlacesEncontrados.forEach((url) => {
+      const urlBase64 = Buffer.from(url).toString("Base64").replace(/=/g, "");
+
+      console.log(url);
+      console.log(urlBase64);
+    });
+  }
 });
 
 client.login(process.env.TOKEN);
