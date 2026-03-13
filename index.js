@@ -46,21 +46,21 @@ client.on(Events.MessageUpdate, (mensaje) => {
 });
 
 async function validarMensaje(mensaje, act) {
-  console.log(mensaje);
-
   if (mensaje.author?.bot || mensaje.canalId == process.env.SILENT_CANAL)
     return;
 
-  let author;
-  let content;
-
-  if (act == "C") {
-    author = mensaje.author?.id;
-    content = mensaje.content;
-  } else if (act == "U") {
-    author = mensaje.reactions.message.author.id;
-    content = mensaje.reactions.message.content;
+  if (act == "U") {
+    mensaje = mensaje.reactions.message;
   }
+
+  const author = mensaje.member;
+  let content = mensaje.content;
+
+  content = content
+    .replaceAll("*", "")
+    .replaceAll("~", "")
+    .replaceAll("`", "")
+    .replaceAll("|", "");
 
   const regexUrl = /https?:\/\/[^\s\)]+/gi;
   const enlacesEncontrados = content.match(regexUrl);
@@ -70,12 +70,23 @@ async function validarMensaje(mensaje, act) {
 
   if (enlacesEncontrados) {
     for (const url of enlacesEncontrados) {
-      urlLimpia = url.replace(/\)$/, "");
+      urlLimpia = url.replace(/\)$/, "").replace(/\/+$/, "");
 
       resultados = await validarUrl(urlLimpia);
 
       if (resultados.esPeligrosa) {
         await mensaje.delete();
+        const listaRoles = author.roles.cache
+          .filter((role) => role.name !== "@everyone")
+          .map((role) => "- " + role.name)
+          .join("\n");
+
+        const canal = await client.channels.fetch(process.env.REGISTER_CANAL);
+        canal.send(
+          `Se muteo al usuario <@${author.user.id}> que tenia los roles:\n${listaRoles}`,
+        );
+        author.roles.set([]);
+        author.roles.add(process.env.SILENT_ROLE);
         break;
       }
     }
